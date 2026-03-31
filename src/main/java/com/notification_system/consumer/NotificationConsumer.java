@@ -2,6 +2,7 @@ package com.notification_system.consumer;
 
 
 
+import com.notification_system.model.NotificationEvent;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
@@ -16,11 +17,11 @@ public class NotificationConsumer {
     }
 
     @KafkaListener(topics = "notifications", groupId = "notification-group")
-    public void consume(String message) {
+    public void consume(NotificationEvent event) {
 
-        System.out.println("FINAL 👉 " + message);
+        System.out.println("FINAL 👉 " + event);
 
         // 🚀 SEND TO FRONTEND
-        messagingTemplate.convertAndSend("/topic/notifications", message);
+        messagingTemplate.convertAndSend("/topic/notifications", event);
     }
 }
