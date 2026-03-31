@@ -14,6 +14,7 @@ public class KafkaProducerService {
     }
 
     public void sendEvent(NotificationEvent event) {
+        System.out.println("🔥 SENDING TO KAFKA: " + event);
         kafkaTemplate.send("notifications", event.getUserId(), event);
     }
 }

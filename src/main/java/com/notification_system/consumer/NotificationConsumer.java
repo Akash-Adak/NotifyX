@@ -15,7 +15,7 @@ public class NotificationConsumer {
         this.messagingTemplate = messagingTemplate;
     }
 
-    @KafkaListener(topics = "processed-notifications", groupId = "notification-group")
+    @KafkaListener(topics = "notifications", groupId = "notification-group")
     public void consume(String message) {
 
         System.out.println("FINAL 👉 " + message);
