@@ -3,6 +3,7 @@ package com.notification_system.consumer;
 
 
 import com.notification_system.model.NotificationEvent;
+import com.notification_system.model.NotificationResponse;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -22,25 +23,31 @@ public class NotificationConsumer {
     }
 
 
-    @KafkaListener(topics = "notifications", groupId = "notification-group")
-    public void consume(NotificationEvent event) {
+//    @KafkaListener(topics = "notifications", groupId = "notification-group")
+//    public void consume(NotificationEvent event) {
+//
+//        String key = event.getUserId();
+//
+//        int count = likeCounter.getOrDefault(key, 0) + 1;
+//        likeCounter.put(key, count);
+//
+//        System.out.println("🔥 Aggregated count: " + count);
+//
+//        if (count == 1 || count % 5 == 0) {
+//
+//            Map<String, Object> data = new HashMap<>();
+//            data.put("message", count + " people liked your post");
+//
+//            messagingTemplate.convertAndSend("/topic/notifications", data);
+//        }
+//    }
+@KafkaListener(topics = "aggregated-notifications", groupId = "notification-group")
+public void consume(NotificationResponse data) {
 
-        String key = event.getUserId();
+    System.out.println("🔥 FINAL: " + data.getMessage());
 
-        int count = likeCounter.getOrDefault(key, 0) + 1;
-        likeCounter.put(key, count);
-
-        System.out.println("🔥 Aggregated count: " + count);
-
-        if (count == 1 || count % 5 == 0) {
-
-            Map<String, Object> data = new HashMap<>();
-            data.put("message", count + " people liked your post");
-
-            messagingTemplate.convertAndSend("/topic/notifications", data);
-        }
-    }
-
+    messagingTemplate.convertAndSend("/topic/notifications", data);
+}
 
     @Scheduled(fixedRate = 60000) // every 1 min
     public void clearCounters() {

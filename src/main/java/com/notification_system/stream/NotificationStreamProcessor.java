@@ -3,6 +3,7 @@ package com.notification_system.stream;
 import com.notification_system.config.JsonSerde;
 import com.notification_system.model.NotificationEvent;
 
+import com.notification_system.model.NotificationResponse;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.KeyValue;
@@ -12,6 +13,8 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import java.time.Duration;
+import java.util.HashMap;
+import java.util.Map;
 
 @Configuration
 public class NotificationStreamProcessor {
@@ -20,32 +23,21 @@ public class NotificationStreamProcessor {
     public KStream<String, NotificationEvent> process(StreamsBuilder builder) {
 
         KStream<String, NotificationEvent> stream =
-                builder.stream("notifications",
-                        Consumed.with(Serdes.String(), new JsonSerde<>(NotificationEvent.class)));
+                builder.stream("notifications");
 
         stream
-                // group by user + type (IMPORTANT IMPROVEMENT)
-                .groupBy((key, value) -> key + "-" + value.getType(),
-                        Grouped.with(Serdes.String(), new JsonSerde<>(NotificationEvent.class)))
-
-                .windowedBy(TimeWindows.of(Duration.ofDays(10000)))
-
-                .count()
-
+                .groupBy((key, event) -> event.getUserId())
+                .count(Materialized.as("like-count-store"))
                 .toStream()
-
-                .map((key, count) -> KeyValue.pair(
-                        key.key(),
-                        key.key() + " → You got " + count + " " + extractType(key.key()) + " notifications"
-                ))
-
-                .to("processed-notifications",
-                        Produced.with(Serdes.String(), Serdes.String()));
+                .mapValues(count ->
+                        new NotificationResponse(count + " people liked your post")
+                )
+                .to(
+                        "aggregated-notifications",
+                        Produced.with(Serdes.String(), new JsonSerde<>(NotificationResponse.class))
+                );
 
         return stream;
     }
 
-    private String extractType(String key) {
-        return key.split("-")[1];
-    }
 }
