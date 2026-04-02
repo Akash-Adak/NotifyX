@@ -3,8 +3,7 @@ package com.notification_system;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.kafka.annotation.EnableKafkaStreams;
-
-@SpringBootApplication
+@SpringBootApplication(scanBasePackages = "com.notification_system")
 @EnableKafkaStreams
 public class NotificationSystemApplication {
 
