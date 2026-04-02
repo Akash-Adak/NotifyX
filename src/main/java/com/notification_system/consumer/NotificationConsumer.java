@@ -1,56 +1,52 @@
 package com.notification_system.consumer;
 
-
-
 import com.notification_system.model.NotificationEvent;
-import com.notification_system.model.NotificationResponse;
 import org.springframework.kafka.annotation.KafkaListener;
+import org.springframework.kafka.annotation.RetryableTopic;
+import org.springframework.kafka.retrytopic.TopicSuffixingStrategy;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
-import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.retry.annotation.Backoff;
 import org.springframework.stereotype.Service;
-
-import java.util.HashMap;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 public class NotificationConsumer {
-    private Map<String, Integer> likeCounter = new ConcurrentHashMap<>();
+
     private final SimpMessagingTemplate messagingTemplate;
 
     public NotificationConsumer(SimpMessagingTemplate messagingTemplate) {
         this.messagingTemplate = messagingTemplate;
     }
 
-
-//    @KafkaListener(topics = "notifications", groupId = "notification-group")
+//    @KafkaListener(
+//            topics = "aggregated-notifications",
+//            groupId = "notification-group-v2"
+//    )
 //    public void consume(NotificationEvent event) {
 //
-//        String key = event.getUserId();
+//        System.out.println("🔥 FINAL NOTIFICATION: " + event.getMessage());
 //
-//        int count = likeCounter.getOrDefault(key, 0) + 1;
-//        likeCounter.put(key, count);
-//
-//        System.out.println("🔥 Aggregated count: " + count);
-//
-//        if (count == 1 || count % 5 == 0) {
-//
-//            Map<String, Object> data = new HashMap<>();
-//            data.put("message", count + " people liked your post");
-//
-//            messagingTemplate.convertAndSend("/topic/notifications", data);
-//        }
+//        messagingTemplate.convertAndSend("/topic/notifications", event);
 //    }
-@KafkaListener(topics = "aggregated-notifications", groupId = "notification-group")
-public void consume(NotificationResponse data) {
 
-    System.out.println("🔥 FINAL: " + data.getMessage());
 
-    messagingTemplate.convertAndSend("/topic/notifications", data);
-}
 
-    @Scheduled(fixedRate = 60000) // every 1 min
-    public void clearCounters() {
-        likeCounter.clear();
+    @RetryableTopic(
+            attempts = "3",   // total attempts
+            backoff = @Backoff(delay = 2000), // 2 sec delay
+            topicSuffixingStrategy = TopicSuffixingStrategy.SUFFIX_WITH_INDEX_VALUE,
+            dltTopicSuffix = "-dlq"
+    )
+    @KafkaListener(topics = "notification-topic", groupId = "notification-group")
+    public void consume(NotificationEvent event) {
+
+        System.out.println("📩 Received: " + event);
+
+        // simulate failure
+        if (event.getType() == null) {
+            System.out.println("❌ Error: Invalid event");
+            throw new RuntimeException("Invalid event");
+        }
+
+        System.out.println("✅ Processed successfully");
     }
 }
