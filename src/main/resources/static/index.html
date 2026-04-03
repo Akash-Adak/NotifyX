@@ -1,115 +1,222 @@
 <!DOCTYPE html>
-
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Kafka Live Notifications</title>
-
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kafka Notification System</title>
 
     <!-- WebSocket libs -->
     <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/stompjs/lib/stomp.min.js"></script>
 
     <style>
-        body {
+        * {
             margin: 0;
-            font-family: 'Segoe UI', sans-serif;
-            background: linear-gradient(135deg, #0f172a, #1e293b);
-            color: white;
-            display: flex;
-            justify-content: center;
+            padding: 0;
+            box-sizing: border-box;
         }
 
-        .app {
-            width: 90%;
-            max-width: 900px;
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            background: #f5f7fa;
+            color: #2c3e50;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
             padding: 20px;
         }
 
         .header {
+            background: white;
+            padding: 24px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            margin-bottom: 24px;
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
 
-        h1 {
-            margin: 0;
+        .header h1 {
+            font-size: 24px;
+            font-weight: 600;
+            color: #2c3e50;
         }
 
-        .status {
+        .status-container {
             display: flex;
-            gap: 10px;
+            gap: 16px;
             align-items: center;
         }
 
-        .badge {
-            background: #22c55e;
-            padding: 6px 12px;
-            border-radius: 20px;
-            font-size: 12px;
+        .status-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            background: #e8f5e9;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            color: #2e7d32;
         }
 
-        .counter {
-            background: #38bdf8;
-            padding: 6px 12px;
-            border-radius: 20px;
-            font-size: 12px;
+        .status-badge .dot {
+            width: 8px;
+            height: 8px;
+            background: #4caf50;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .notification-count {
+            padding: 8px 16px;
+            background: #e3f2fd;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            color: #1565c0;
         }
 
         .controls {
-            margin-top: 20px;
             display: flex;
-            gap: 10px;
+            gap: 12px;
+            margin-bottom: 24px;
+            justify-content: flex-end;
         }
 
-        input {
-            flex: 1;
-            padding: 10px;
-            border-radius: 8px;
+        .btn {
+            padding: 10px 20px;
             border: none;
-            outline: none;
-        }
-
-        button {
-            padding: 10px 15px;
             border-radius: 8px;
-            border: none;
+            font-size: 14px;
+            font-weight: 600;
             cursor: pointer;
-            background: #22c55e;
-            color: white;
-            font-weight: bold;
+            transition: all 0.2s;
         }
 
-        ul {
-            list-style: none;
-            padding: 0;
-            margin-top: 20px;
+        .btn-clear {
+            background: #f5f5f5;
+            color: #2c3e50;
+            border: 1px solid #d0d7de;
         }
 
-        li {
-            background: rgba(255,255,255,0.05);
-            backdrop-filter: blur(10px);
-            margin: 12px 0;
-            padding: 16px;
+        .btn-clear:hover {
+            background: #e5e5e5;
+        }
+
+        .notifications-section {
+            background: white;
             border-radius: 12px;
-            border-left: 5px solid #38bdf8;
-            animation: slideIn 0.4s ease;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            overflow: hidden;
         }
 
-        .time {
+        .notifications-list {
+            list-style: none;
+            max-height: 600px;
+            overflow-y: auto;
+        }
+
+        .notification-item {
+            padding: 16px 20px;
+            border-bottom: 1px solid #f0f0f0;
+            display: flex;
+            gap: 12px;
+            animation: slideIn 0.3s ease-out;
+            transition: background-color 0.2s;
+        }
+
+        .notification-item:last-child {
+            border-bottom: none;
+        }
+
+        .notification-item:hover {
+            background: #f9f9f9;
+        }
+
+        .notification-icon {
+            font-size: 20px;
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+
+        .notification-content {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .notification-message {
+            font-size: 14px;
+            color: #2c3e50;
+            word-break: break-word;
+            margin-bottom: 6px;
+        }
+
+        .notification-meta {
+            display: flex;
+            gap: 16px;
             font-size: 12px;
             color: #94a3b8;
         }
 
-        .empty {
+        .notification-user {
+            font-weight: 500;
+            color: #1976d2;
+        }
+
+        .empty-state {
+            padding: 60px 20px;
             text-align: center;
-            margin-top: 50px;
-            color: #64748b;
+            color: #9ca3af;
+        }
+
+        .empty-state-icon {
+            font-size: 48px;
+            margin-bottom: 12px;
+            opacity: 0.5;
+        }
+
+        .empty-state-text {
+            font-size: 16px;
+            color: #6b7280;
         }
 
         @keyframes slideIn {
-            from {opacity:0; transform:translateY(30px);}
-            to {opacity:1; transform:translateY(0);}
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Scrollbar styling */
+        .notifications-list::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .notifications-list::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .notifications-list::-webkit-scrollbar-thumb {
+            background: #d0d7de;
+            border-radius: 4px;
+        }
+
+        .notifications-list::-webkit-scrollbar-thumb:hover {
+            background: #b0b8c2;
         }
     </style>
 
@@ -118,31 +225,30 @@
 
 <body>
 
-<div class="app">
-
-
+<div class="container">
     <div class="header">
-        <h1>🔥 Kafka Notifications</h1>
-        <div class="status">
-            <div class="badge">LIVE</div>
-            <div class="counter" id="count">0</div>
+        <h1>Kafka Notification System</h1>
+        <div class="status-container">
+            <div class="status-badge">
+                <span class="dot"></span>
+                Live
+            </div>
+            <div class="notification-count" id="count">0 notifications</div>
         </div>
     </div>
 
     <div class="controls">
-        <input id="filter" placeholder="Filter by userId (optional)">
-        <button onclick="clearAll()">Clear</button>
+        <button class="btn btn-clear" onclick="clearAll()">Clear All</button>
     </div>
 
-    <ul id="notifications"></ul>
-    <div id="empty" class="empty">No notifications yet...</div>
-
-
+    <div class="notifications-section">
+        <ul id="notifications" class="notifications-list"></ul>
+        <div id="empty" class="empty-state">
+            <div class="empty-state-icon">📭</div>
+            <div class="empty-state-text">No notifications yet. Waiting for incoming events...</div>
+        </div>
+    </div>
 </div>
-
-<!-- Notification sound -->
-
-<audio id="sound" src="https://www.soundjay.com/buttons/sounds/button-3.mp3"></audio>
 
 <script>
     const socket = new SockJS('/ws');
@@ -151,60 +257,63 @@
     const list = document.getElementById("notifications");
     const empty = document.getElementById("empty");
     const counter = document.getElementById("count");
-    const filterInput = document.getElementById("filter");
-    const sound = document.getElementById("sound");
 
     let count = 0;
 
     stompClient.connect({}, function () {
-        console.log("Connected ✅");
+        console.log("✅ WebSocket Connected");
 
         stompClient.subscribe('/topic/notifications', function (message) {
-
             const data = JSON.parse(message.body);
 
-            const filter = filterInput.value.trim();
-
-            // Filter logic
-            if (filter && data.userId !== filter) return;
-
             const li = document.createElement("li");
+            li.className = "notification-item";
 
-            const time = new Date().toLocaleTimeString();
+            const timestamp = new Date(data.timestamp).toLocaleString();
 
-          li.innerHTML = `
-    <div>💬 ${data.message}</div>
-    <div class="time">
-        ${new Date(data.timestamp).toLocaleTimeString()}
-    </div>
-`;
+            li.innerHTML = `
+                <div class="notification-icon">📨</div>
+                <div class="notification-content">
+                    <div class="notification-message">${escapeHtml(data.message)}</div>
+                    <div class="notification-meta">
+                        <span><strong class="notification-user">${escapeHtml(data.userId || 'System')}</strong></span>
+                        <span>${timestamp}</span>
+                    </div>
+                </div>
+            `;
 
             list.prepend(li);
-
             empty.style.display = "none";
-
-            // Play sound
-            sound.play();
 
             // Update counter
             count++;
-            counter.innerText = count;
+            updateCounter();
 
-            // Auto remove after 12 sec
+            // Auto remove after 15 seconds
             setTimeout(() => {
                 li.remove();
                 count--;
-                counter.innerText = count;
+                updateCounter();
                 if (count === 0) empty.style.display = "block";
-            }, 12000);
+            }, 15000);
         });
     });
+
+    function updateCounter() {
+        counter.innerText = count + (count === 1 ? ' notification' : ' notifications');
+    }
 
     function clearAll() {
         list.innerHTML = "";
         count = 0;
-        counter.innerText = 0;
+        updateCounter();
         empty.style.display = "block";
+    }
+
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
     }
 </script>
 
