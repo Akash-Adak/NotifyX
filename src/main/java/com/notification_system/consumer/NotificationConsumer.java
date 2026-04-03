@@ -1,7 +1,9 @@
 package com.notification_system.consumer;
 
+import com.notification_system.model.NotificationDLQEntity;
 import com.notification_system.model.NotificationEntity;
 import com.notification_system.model.NotificationEvent;
+import com.notification_system.repository.NotificationDLQRepository;
 import com.notification_system.repository.NotificationRepository;
 
 import org.slf4j.Logger;
@@ -21,6 +23,9 @@ public class NotificationConsumer {
     private static final Logger log = LoggerFactory.getLogger(NotificationConsumer.class);
     @Autowired
     private NotificationRepository repository;
+    @Autowired
+    private NotificationDLQRepository dlqRepository;
+
     private final SimpMessagingTemplate messagingTemplate;
 
     public NotificationConsumer(SimpMessagingTemplate messagingTemplate) {
@@ -60,13 +65,22 @@ public class NotificationConsumer {
         entity.setCreatedAt(System.currentTimeMillis());
         return entity;
     }
-
+    private NotificationDLQEntity mapToDLQEntity(NotificationEvent event) {
+        NotificationDLQEntity entity = new NotificationDLQEntity();
+        entity.setUserId(event.getUserId());
+        entity.setType(event.getType());
+        entity.setMessage(event.getMessage());
+        entity.setCreatedAt(System.currentTimeMillis());
+        return entity;
+    }
     @KafkaListener(
             topics = "aggregated-notifications-dlq",
             groupId = "dlq-group"
     )
     public void consumeDLQ(NotificationEvent event) {
         log.error("DLQ notification event received: {}", event);
+        NotificationDLQEntity entity = mapToDLQEntity(event);
+        dlqRepository.save(entity);
     }
 
     @DltHandler
