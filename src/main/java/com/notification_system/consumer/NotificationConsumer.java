@@ -1,8 +1,12 @@
 package com.notification_system.consumer;
 
+import com.notification_system.model.NotificationEntity;
 import com.notification_system.model.NotificationEvent;
+import com.notification_system.repository.NotificationRepository;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.kafka.annotation.DltHandler;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.annotation.RetryableTopic;
@@ -15,7 +19,8 @@ import org.springframework.stereotype.Service;
 public class NotificationConsumer {
 
     private static final Logger log = LoggerFactory.getLogger(NotificationConsumer.class);
-
+    @Autowired
+    private NotificationRepository repository;
     private final SimpMessagingTemplate messagingTemplate;
 
     public NotificationConsumer(SimpMessagingTemplate messagingTemplate) {
@@ -39,9 +44,21 @@ public class NotificationConsumer {
             log.warn("Invalid notification event received. Sending to retry/DLQ. Event: {}", event);
             throw new RuntimeException("Invalid notification event: type is null");
         }
+        // ✅ Save to DB
+        NotificationEntity entity = mapToEntity(event);
+        repository.save(entity);
 
         messagingTemplate.convertAndSend("/topic/notifications", event);
         log.info("Notification pushed to WebSocket topic for userId={}, type={}", event.getUserId(), event.getType());
+    }
+
+    private NotificationEntity mapToEntity(NotificationEvent event) {
+        NotificationEntity entity = new NotificationEntity();
+        entity.setUserId(event.getUserId());
+        entity.setType(event.getType());
+        entity.setMessage(event.getMessage());
+        entity.setCreatedAt(System.currentTimeMillis());
+        return entity;
     }
 
     @KafkaListener(
