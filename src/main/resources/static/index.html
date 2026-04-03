@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Kafka Live Notifications</title>
+
+
+    <!-- WebSocket libs -->
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/stompjs/lib/stomp.min.js"></script>
+
+    <style>
+        body {
+            margin: 0;
+            font-family: 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #0f172a, #1e293b);
+            color: white;
+            display: flex;
+            justify-content: center;
+        }
+
+        .app {
+            width: 90%;
+            max-width: 900px;
+            padding: 20px;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        h1 {
+            margin: 0;
+        }
+
+        .status {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .badge {
+            background: #22c55e;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+        }
+
+        .counter {
+            background: #38bdf8;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+        }
+
+        .controls {
+            margin-top: 20px;
+            display: flex;
+            gap: 10px;
+        }
+
+        input {
+            flex: 1;
+            padding: 10px;
+            border-radius: 8px;
+            border: none;
+            outline: none;
+        }
+
+        button {
+            padding: 10px 15px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            background: #22c55e;
+            color: white;
+            font-weight: bold;
+        }
+
+        ul {
+            list-style: none;
+            padding: 0;
+            margin-top: 20px;
+        }
+
+        li {
+            background: rgba(255,255,255,0.05);
+            backdrop-filter: blur(10px);
+            margin: 12px 0;
+            padding: 16px;
+            border-radius: 12px;
+            border-left: 5px solid #38bdf8;
+            animation: slideIn 0.4s ease;
+        }
+
+        .time {
+            font-size: 12px;
+            color: #94a3b8;
+        }
+
+        .empty {
+            text-align: center;
+            margin-top: 50px;
+            color: #64748b;
+        }
+
+        @keyframes slideIn {
+            from {opacity:0; transform:translateY(30px);}
+            to {opacity:1; transform:translateY(0);}
+        }
+    </style>
+
+
+</head>
+
+<body>
+
+<div class="app">
+
+
+    <div class="header">
+        <h1>🔥 Kafka Notifications</h1>
+        <div class="status">
+            <div class="badge">LIVE</div>
+            <div class="counter" id="count">0</div>
+        </div>
+    </div>
+
+    <div class="controls">
+        <input id="filter" placeholder="Filter by userId (optional)">
+        <button onclick="clearAll()">Clear</button>
+    </div>
+
+    <ul id="notifications"></ul>
+    <div id="empty" class="empty">No notifications yet...</div>
+
+
+</div>
+
+<!-- Notification sound -->
+
+<audio id="sound" src="https://www.soundjay.com/buttons/sounds/button-3.mp3"></audio>
+
+<script>
+    const socket = new SockJS('/ws');
+    const stompClient = Stomp.over(socket);
+
+    const list = document.getElementById("notifications");
+    const empty = document.getElementById("empty");
+    const counter = document.getElementById("count");
+    const filterInput = document.getElementById("filter");
+    const sound = document.getElementById("sound");
+
+    let count = 0;
+
+    stompClient.connect({}, function () {
+        console.log("Connected ✅");
+
+        stompClient.subscribe('/topic/notifications', function (message) {
+
+            const data = JSON.parse(message.body);
+
+            const filter = filterInput.value.trim();
+
+            // Filter logic
+            if (filter && data.userId !== filter) return;
+
+            const li = document.createElement("li");
+
+            const time = new Date().toLocaleTimeString();
+
+          li.innerHTML = `
+    <div>💬 ${data.message}</div>
+    <div class="time">
+        ${new Date(data.timestamp).toLocaleTimeString()}
+    </div>
+`;
+
+            list.prepend(li);
+
+            empty.style.display = "none";
+
+            // Play sound
+            sound.play();
+
+            // Update counter
+            count++;
+            counter.innerText = count;
+
+            // Auto remove after 12 sec
+            setTimeout(() => {
+                li.remove();
+                count--;
+                counter.innerText = count;
+                if (count === 0) empty.style.display = "block";
+            }, 12000);
+        });
+    });
+
+    function clearAll() {
+        list.innerHTML = "";
+        count = 0;
+        counter.innerText = 0;
+        empty.style.display = "block";
+    }
+</script>
+
+</body>
+</html>
