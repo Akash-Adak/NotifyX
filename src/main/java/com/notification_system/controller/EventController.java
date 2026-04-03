@@ -19,6 +19,7 @@ public class EventController {
 
     @PostMapping
     public String send(@RequestBody NotificationEvent event) {
+        event.setTimestamp(System.currentTimeMillis());
         producer.sendEvent(event);
         return "Event sent 🚀";
     }
