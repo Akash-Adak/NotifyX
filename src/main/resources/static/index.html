@@ -1,10 +1,8 @@
 <!DOCTYPE html>
-
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <title>Kafka Live Notifications</title>
-
 
     <!-- WebSocket libs -->
     <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
@@ -32,9 +30,7 @@
             align-items: center;
         }
 
-        h1 {
-            margin: 0;
-        }
+        h1 { margin: 0; }
 
         .status {
             display: flex;
@@ -75,10 +71,11 @@
             border-radius: 8px;
             border: none;
             cursor: pointer;
-            background: #22c55e;
-            color: white;
             font-weight: bold;
         }
+
+        .btn-green { background: #22c55e; color: white; }
+        .btn-blue { background: #3b82f6; color: white; }
 
         ul {
             list-style: none;
@@ -92,13 +89,18 @@
             margin: 12px 0;
             padding: 16px;
             border-radius: 12px;
-            border-left: 5px solid #38bdf8;
             animation: slideIn 0.4s ease;
         }
 
         .time {
             font-size: 12px;
             color: #94a3b8;
+        }
+
+        .priority {
+            font-size: 11px;
+            font-weight: bold;
+            margin-top: 5px;
         }
 
         .empty {
@@ -112,14 +114,11 @@
             to {opacity:1; transform:translateY(0);}
         }
     </style>
-
-
 </head>
 
 <body>
 
 <div class="app">
-
 
     <div class="header">
         <h1>🔥 Kafka Notifications</h1>
@@ -129,15 +128,16 @@
         </div>
     </div>
 
-
+    <div class="controls">
+        <input id="filter" placeholder="Filter by userId (e.g. user123)">
+        <button class="btn-green" onclick="clearAll()">Clear</button>
+        <button class="btn-blue" onclick="toggleStream()" id="toggleBtn">Pause</button>
+    </div>
 
     <ul id="notifications"></ul>
     <div id="empty" class="empty">No notifications yet...</div>
 
-
 </div>
-
-<!-- Notification sound -->
 
 <audio id="sound" src="https://www.soundjay.com/buttons/sounds/button-3.mp3"></audio>
 
@@ -150,51 +150,83 @@
     const counter = document.getElementById("count");
     const filterInput = document.getElementById("filter");
     const sound = document.getElementById("sound");
+    const toggleBtn = document.getElementById("toggleBtn");
 
     let count = 0;
+    let paused = false;
+
+    const typeColor = {
+        payment: "#ef4444",
+        success: "#22c55e",
+        alert: "#facc15"
+    };
+
+    const priorityColor = {
+        HIGH: "#ef4444",
+        MEDIUM: "#facc15",
+        LOW: "#22c55e"
+    };
 
     stompClient.connect({}, function () {
         console.log("Connected ✅");
 
         stompClient.subscribe('/topic/notifications', function (message) {
 
+            if (paused) return;
+
             const data = JSON.parse(message.body);
 
             const filter = filterInput.value.trim();
-
-            // Filter logic
             if (filter && data.userId !== filter) return;
 
             const li = document.createElement("li");
 
-            const time = new Date().toLocaleTimeString();
+            // Apply type color
+            li.style.borderLeft = `5px solid ${typeColor[data.type] || "#38bdf8"}`;
 
-          li.innerHTML = `
-    <div>💬 ${data.message}</div>
-    <div class="time">
-        ${new Date(data.timestamp).toLocaleTimeString()}
-    </div>
-`;
+            li.innerHTML = `
+                <div>💬 ${data.message}</div>
+
+                <div class="priority" style="color:${priorityColor[data.priority] || "#94a3b8"}">
+                    ${data.priority || "NORMAL"}
+                </div>
+
+                <div class="time">
+                    ${new Date(data.timestamp).toLocaleTimeString()}
+                </div>
+            `;
 
             list.prepend(li);
-
             empty.style.display = "none";
 
-            // Play sound
-            sound.play();
+            // sound
+            sound.play().catch(() => {});
 
-            // Update counter
+            // counter
             count++;
             counter.innerText = count;
 
-            // Auto remove after 12 sec
+            // max limit
+            if (list.children.length > 20) {
+                list.removeChild(list.lastChild);
+                count--;
+                counter.innerText = count;
+            }
+
+            // auto remove
             setTimeout(() => {
                 li.remove();
                 count--;
                 counter.innerText = count;
-                if (count === 0) empty.style.display = "block";
+
+                if (count <= 0) {
+                    empty.style.display = "block";
+                }
             }, 12000);
         });
+
+    }, function (error) {
+        console.error("Connection failed ❌", error);
     });
 
     function clearAll() {
@@ -202,6 +234,11 @@
         count = 0;
         counter.innerText = 0;
         empty.style.display = "block";
+    }
+
+    function toggleStream() {
+        paused = !paused;
+        toggleBtn.innerText = paused ? "Resume" : "Pause";
     }
 </script>
 

@@ -51,3 +51,7 @@ spring:
 
   jackson:
     time-zone: UTC
+
+gemini:
+  api:
+    key: {GEMINI_API_KEY}

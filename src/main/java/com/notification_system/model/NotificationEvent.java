@@ -11,6 +11,15 @@ public class NotificationEvent {
     private String userId;
     private String type;
 
+    public String getPriority() {
+        return priority;
+    }
+
+    public void setPriority(String priority) {
+        this.priority = priority;
+    }
+
+    private String priority;
     public int getCount() {
         return count;
     }

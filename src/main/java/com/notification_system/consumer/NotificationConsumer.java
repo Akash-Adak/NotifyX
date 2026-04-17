@@ -5,10 +5,10 @@ import com.notification_system.model.NotificationEntity;
 import com.notification_system.model.NotificationEvent;
 import com.notification_system.repository.NotificationDLQRepository;
 import com.notification_system.repository.NotificationRepository;
+import com.notification_system.service.AIService;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.kafka.annotation.DltHandler;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.annotation.RetryableTopic;
@@ -21,16 +21,25 @@ import org.springframework.stereotype.Service;
 public class NotificationConsumer {
 
     private static final Logger log = LoggerFactory.getLogger(NotificationConsumer.class);
-    @Autowired
-    private NotificationRepository repository;
-    @Autowired
-    private NotificationDLQRepository dlqRepository;
 
+    private final NotificationRepository repository;
+    private final NotificationDLQRepository dlqRepository;
+    private final AIService aiService;
     private final SimpMessagingTemplate messagingTemplate;
 
-    public NotificationConsumer(SimpMessagingTemplate messagingTemplate) {
+    public NotificationConsumer(NotificationRepository repository,
+                                NotificationDLQRepository dlqRepository,
+                                AIService aiService,
+                                SimpMessagingTemplate messagingTemplate) {
+        this.repository = repository;
+        this.dlqRepository = dlqRepository;
+        this.aiService = aiService;
         this.messagingTemplate = messagingTemplate;
     }
+
+    // ============================================
+    // 🔁 MAIN CONSUMER WITH AI RETRY LOGIC
+    // ============================================
 
     @RetryableTopic(
             attempts = "3",
@@ -43,19 +52,55 @@ public class NotificationConsumer {
             groupId = "notification-group"
     )
     public void consume(NotificationEvent event) {
-        log.info("Received notification event: {}", event);
+
+        log.info("📩 Received notification event: {}", event);
+
+        // ============================================
+        // ❌ VALIDATION + AI DECISION
+        // ============================================
 
         if (event == null || event.getType() == null) {
-            log.warn("Invalid notification event received. Sending to retry/DLQ. Event: {}", event);
-            throw new RuntimeException("Invalid notification event: type is null");
+
+            log.warn("⚠️ Invalid event detected → invoking AI decision");
+
+            String decision = aiService.shouldRetry(
+                    event != null ? event : new NotificationEvent()
+            );
+
+            log.info("🤖 AI Decision: {}", decision);
+
+            if ("DROP".equalsIgnoreCase(decision)) {
+
+                log.error("❌ Dropping event → sending to DLQ");
+
+                dlqRepository.save(mapToDLQEntity(event));
+                return;
+            }
+
+            throw new RuntimeException("Retrying based on AI decision");
         }
-        // ✅ Save to DB
+
+        // ============================================
+        // 🔥 NORMAL FLOW
+        // ============================================
+
         NotificationEntity entity = mapToEntity(event);
         repository.save(entity);
 
+        // 🔥 WebSocket push
         messagingTemplate.convertAndSend("/topic/notifications", event);
-        log.info("Notification pushed to WebSocket topic for userId={}, type={}", event.getUserId(), event.getType());
+
+        log.info(
+                "✅ Notification sent → userId={}, type={}, priority={}",
+                event.getUserId(),
+                event.getType(),
+                event.getPriority()
+        );
     }
+
+    // ============================================
+    // 🧱 ENTITY MAPPING
+    // ============================================
 
     private NotificationEntity mapToEntity(NotificationEvent event) {
         NotificationEntity entity = new NotificationEntity();
@@ -65,26 +110,44 @@ public class NotificationConsumer {
         entity.setCreatedAt(System.currentTimeMillis());
         return entity;
     }
+
     private NotificationDLQEntity mapToDLQEntity(NotificationEvent event) {
         NotificationDLQEntity entity = new NotificationDLQEntity();
-        entity.setUserId(event.getUserId());
-        entity.setType(event.getType());
-        entity.setMessage(event.getMessage());
+
+        if (event != null) {
+            entity.setUserId(event.getUserId());
+            entity.setType(event.getType());
+            entity.setMessage(event.getMessage());
+        } else {
+            entity.setMessage("NULL EVENT");
+        }
+
         entity.setCreatedAt(System.currentTimeMillis());
         return entity;
     }
+
+    // ============================================
+    // 💀 DLQ CONSUMER
+    // ============================================
+
     @KafkaListener(
             topics = "aggregated-notifications-dlq",
             groupId = "dlq-group"
     )
     public void consumeDLQ(NotificationEvent event) {
-        log.error("DLQ notification event received: {}", event);
+
+        log.error("💀 DLQ event received: {}", event);
+
         NotificationDLQEntity entity = mapToDLQEntity(event);
         dlqRepository.save(entity);
     }
 
+    // ============================================
+    // 🚨 FINAL FAILURE HANDLER
+    // ============================================
+
     @DltHandler
     public void handleDLT(NotificationEvent event) {
-        log.error("Final failed notification event reached DLT handler: {}", event);
+        log.error("🚨 FINAL FAILURE → DLT handler triggered: {}", event);
     }
 }
