@@ -1,0 +1,57 @@
+spring:
+  kafka:
+    bootstrap-servers: localhost:9092   # ✅ changed
+
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      properties:
+        spring.json.add.type.headers: false
+
+    consumer:
+      group-id: notification-group
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: "com.notification_system.model"
+        spring.json.value.default.type: com.notification_system.model.NotificationEvent
+        spring.json.use.type.headers: false
+
+    streams:
+      application-id: notification-stream-final
+      state-dir: F:/kafka-streams-state
+      bootstrap-servers: localhost:9092   # ✅ changed
+      properties:
+        cache.max.bytes.buffering: 0
+        commit.interval.ms: 100
+        auto.offset.reset: earliest
+        allow.auto.create.topics: true
+        default.key.serde: org.apache.kafka.common.serialization.Serdes$StringSerde
+        default.value.serde: org.springframework.kafka.support.serializer.JsonSerde
+
+
+
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/notification_db?options=-c%20TimeZone=UTC
+    username: admin
+    password: admin
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+
+
+  jackson:
+    time-zone: UTC
+
+gemini:
+  api:
+    key: {GEMINI_API_KEY}
