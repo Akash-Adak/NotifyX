@@ -1,222 +1,191 @@
-# NotifyX — Event-Driven Notification Service
+# 🚀 NotifyX — AI-Powered Real-Time Notification System
 
-> A scalable, fault-tolerant notification system built with **Spring Boot**, **Apache Kafka**, and **PostgreSQL**.
-
----
-
-## Table of Contents
-
-- [Overview](#overview)
-- [Tech Stack](#tech-stack)
-- [Features](#features)
-- [Project Structure](#project-structure)
-- [Kafka Flow](#kafka-flow)
-- [API Reference](#api-reference)
-- [Getting Started](#getting-started)
-- [Sample Event](#sample-event)
-- [Troubleshooting](#troubleshooting)
-- [Roadmap](#roadmap)
-- [Contributing](#contributing)
-- [Author](#author)
+> A **production-grade, AI-driven event system** built using **Spring Boot, Kafka, Kafka Streams, Gemini AI, and WebSockets**.
 
 ---
 
-## Overview
+## 🔥 Overview
 
-NotifyX is a production-ready, event-driven notification microservice. It consumes notification events from Kafka topics, processes them asynchronously, and persists them reliably — with built-in retry logic and Dead Letter Queue (DLQ) support for maximum resilience.
+NotifyX is an **intelligent notification system** that delivers real-time updates with:
 
-Built for high-throughput systems where **scalability**, **fault tolerance**, and **clean architecture** are non-negotiable.
-
----
-
-## Tech Stack
-
-| Layer       | Technology                     |
-|-------------|-------------------------------|
-| Backend     | Spring Boot 3                 |
-| Messaging   | Apache Kafka                  |
-| Database    | PostgreSQL                    |
-| ORM         | Spring Data JPA (Hibernate)   |
-| Build Tool  | Maven                         |
-| Java        | 17+                           |
+* ⚡ Ultra-low latency (Kafka + WebSockets)
+* 🧠 AI-based decision making (Gemini API)
+* 🔁 Fault-tolerant processing (Retry + DLQ)
+* 📊 Stream-based aggregation (Kafka Streams)
 
 ---
 
-## Features
+## 🧱 Tech Stack
 
-- **Real-time event consumption** via Kafka listeners
-- **Automatic retry mechanism** for transient failures
-- **Dead Letter Queue (DLQ)** to capture and isolate unprocessable messages
-- **Persistent storage** with PostgreSQL
-- **Pagination & filtering** on notification queries
-- **Microservice-ready** clean layered architecture
-
----
-
-## Project Structure
-
-```
-notification-system/
-│
-├── controller/          # REST API endpoints
-├── service/             # Business logic layer
-├── repository/          # Spring Data JPA repositories
-├── model/               # JPA entity classes
-├── consumer/            # Kafka consumer listeners
-├── config/              # Kafka & application configuration
-└── resources/
-    └── application.yml  # App configuration
-```
+| Layer      | Technology                  |
+| ---------- | --------------------------- |
+| Backend    | Spring Boot 3               |
+| Messaging  | Apache Kafka                |
+| Streaming  | Kafka Streams               |
+| AI Engine  | Gemini API                  |
+| Realtime   | WebSockets (STOMP + SockJS) |
+| Database   | PostgreSQL                  |
+| Frontend   | HTML + JavaScript           |
+| Build Tool | Maven                       |
 
 ---
 
-## Kafka Flow
+# 🏗️ Architecture Diagram
 
-```
-Producer
-   │
-   ▼
-Kafka Topic
-   │
-   ▼
-Consumer ──► Service ──► PostgreSQL
-   │
-   ▼ (on failure)
-Retry Topics
-   │
-   ▼ (exhausted retries)
-Dead Letter Queue (DLQ)
-```
+![Architecture Diagram](assets/architecture.png)
+
 
 ---
 
-## API Reference
+## ⚡ Features
 
-### Get All Notifications
+### 🤖 AI Intelligence
+
+* Smart priority classification (HIGH / MEDIUM / LOW)
+* AI-based retry decision (RETRY / DROP)
+* Intelligent event routing
+
+---
+
+### 🚀 Backend
+
+* Kafka event-driven architecture
+* Multi-topic routing
+* Retry + DLQ mechanism
+* PostgreSQL persistence
+
+---
+
+### 🌊 Kafka Streams
+
+* Real-time aggregation (window-based)
+* Priority-based routing
+* High-priority instant delivery
+
+---
+
+### 🔴 Frontend UI
+
+* Live notifications via WebSockets
+* AI priority badges
+* Sound alerts 🔊
+* Auto-expiring notifications
+* User filtering
+
+---
+
+
+# 🌐 API
+
+### Send Event
 
 ```http
-GET /api/notifications
+POST /api/events
 ```
 
-Returns a paginated list of all notifications.
+### Body
+
+```json
+{
+  "userId": "user123",
+  "type": "payment",
+  "message": "Payment failed due to insufficient balance"
+}
+```
+
+> ⚠️ Priority is automatically handled by AI
 
 ---
 
-### Get Notifications by User
+### Get Notifications
 
 ```http
-GET /api/notifications/user/{userId}
+GET /api/notifications/{userId}
 ```
-
-| Parameter | Type     | Description                  |
-|-----------|----------|------------------------------|
-| `userId`  | `string` | **Required.** Target user ID |
 
 ---
 
-## Getting Started
+## ⚡ WebSocket
+
+```
+/ws
+```
+
+Subscribe:
+
+```
+/topic/notifications
+```
+
+---
+
+## 🚀 Getting Started
 
 ### Prerequisites
 
-Ensure the following services are running before starting the application:
+* Kafka + Zookeeper
+* PostgreSQL
+* Java 17+
 
-- Apache Kafka
-- Zookeeper
-- PostgreSQL
+---
 
-### 1. Clone the Repository
-
-```bash
-git clone https://github.com/your-username/notifyx.git
-cd notifyx
-```
-
-### 2. Configure the Application
-
-Edit `src/main/resources/application.yml` with your database and Kafka credentials.
-
-> ⚠️ **Important:** Use `Asia/Kolkata` as the timezone — `Asia/Calcutta` is deprecated and may cause connection errors.
-
-### 3. Build the Project
-
-```bash
-mvn clean install
-```
-
-### 4. Run the Application
+### Run
 
 ```bash
 mvn spring-boot:run
 ```
 
-The service will start on `http://localhost:8080` by default.
+---
+
+### Open UI
+
+```
+http://localhost:8080/index.html
+```
 
 ---
 
-## Sample Event
+## 🧪 Sample Events
 
-Publish this payload to your configured Kafka topic to trigger a notification:
+### 🔴 High Priority
 
 ```json
 {
   "userId": "user1",
-  "type": "INFO",
-  "message": "User liked your post"
+  "type": "payment",
+  "message": "Payment failed due to insufficient balance"
 }
 ```
 
 ---
 
-## Troubleshooting
+### 🟢 Low Priority
 
-### Database Connection Error
-
-**Symptom:** Application fails to connect to PostgreSQL on startup.
-
-**Fix:** Verify the timezone setting in `application.yml`:
-
-```yaml
-# ✅ Correct
-spring.datasource.url: jdbc:postgresql://localhost:5432/notifyxdb?serverTimezone=Asia/Kolkata
-
-# ❌ Deprecated — will cause errors
-spring.datasource.url: jdbc:postgresql://localhost:5432/notifyxdb?serverTimezone=Asia/Calcutta
+```json
+{
+  "userId": "user1",
+  "type": "promo",
+  "message": "Big discount available!"
+}
 ```
 
 ---
 
-### Kafka Not Consuming Messages
+## 🧠 Use Cases
 
-**Symptom:** Events published to Kafka are not being processed.
-
-**Checklist:**
-- Confirm Kafka is running on `localhost:9092`
-- Verify the topic name matches the configuration in `application.yml`
-- Check consumer group offsets using Kafka CLI tools
-- Review application logs for `KafkaListenerContainerFactory` errors
+* Banking alerts
+* Fraud detection
+* E-commerce updates
+* Monitoring systems
+* Social notifications
 
 ---
 
-
-## Contributing
-
-Contributions are welcome! Here's how to get started:
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/your-feature`)
-3. Commit your changes (`git commit -m 'Add your feature'`)
-4. Push to the branch (`git push origin feature/your-feature`)
-5. Open a Pull Request
-
-Please make sure your code follows the existing style and includes relevant tests.
-
----
-
-## Author
+## 👨‍💻 Author
 
 **Akash Adak**
-Backend & DevOps Enthusiast
+Backend • DevOps • Distributed Systems
 
 ---
 
-<p align="center">If you found this project useful, consider giving it a ⭐ on GitHub!</p>
+<p align="center">⭐ Star this repo if you like it!</p>
